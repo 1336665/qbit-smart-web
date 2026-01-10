@@ -52,6 +52,8 @@ class AutoRemoveEngine:
         
         self._total_removed = 0
         self._total_freed = 0
+
+        self._blackcar_state: Dict[str, float] = {}
     
     def start(self):
         if self._running:
@@ -204,6 +206,31 @@ class AutoRemoveEngine:
         if 'upload_speed_lt' in condition:
             up_speed = torrent.get('upspeed', 0)
             if up_speed >= condition['upload_speed_lt']:
+                return False
+
+        # 黑车档位条件（down/up KiB/s 持续一定时间）
+        if 'blackcar_speeds' in condition:
+            duration = int(condition.get('blackcar_duration', 80))
+            down_kib = float(torrent.get('dlspeed', 0)) / 1024
+            up_kib = float(torrent.get('upspeed', 0)) / 1024
+            in_band = False
+            for pair in condition.get('blackcar_speeds', []):
+                try:
+                    if down_kib <= float(pair.get('down', 0)) and up_kib <= float(pair.get('up', 0)):
+                        in_band = True
+                        break
+                except Exception:
+                    continue
+            torrent_hash = torrent.get('hash', '')
+            if in_band:
+                start = self._blackcar_state.get(torrent_hash)
+                if start is None:
+                    self._blackcar_state[torrent_hash] = time.time()
+                    return False
+                if time.time() - start < duration:
+                    return False
+            else:
+                self._blackcar_state.pop(torrent_hash, None)
                 return False
         
         # 已完成条件
