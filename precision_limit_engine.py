@@ -674,7 +674,7 @@ class PrecisionLimitEngine:
                 kw = (s.get('tracker_keyword') or '').strip().lower()
                 if kw:
                     matchers.append((kw, sid))
-                url = (s.get('site_url') or '').strip().lower()
+                url = (s.get('url') or s.get('site_url') or '').strip().lower()
                 if url:
                     # extract host-ish
                     try:

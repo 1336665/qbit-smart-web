@@ -2173,6 +2173,15 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
+                    <label class="form-label">站点预设</label>
+                    <select class="form-input" id="site-preset-select" onchange="applySitePreset(this.value)">
+                        <option value="">选择预设（可选）</option>
+                    </select>
+                    <div class="preset-hint" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                        ⓘ 选择预设会自动填充站点URL/名称/Tracker关键词
+                    </div>
+                </div>
+                <div class="form-group">
                     <label class="form-label">站点名称 *</label>
                     <input type="text" class="form-input" id="site-name" placeholder="如: U2">
                 </div>
@@ -3760,6 +3769,41 @@
                 sites.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
         }
 
+        async function loadSitePresets() {
+            const select = document.getElementById('site-preset-select');
+            if (!select) {
+                return;
+            }
+            try {
+                const presets = await api('/pt/site_presets');
+                const options = presets.map(preset => {
+                    const label = `${preset.domain} (${preset.site_type || 'unknown'})`;
+                    return `<option value="${preset.domain}">${label}</option>`;
+                }).join('');
+                select.innerHTML = `<option value="">选择预设（可选）</option>${options}`;
+            } catch (error) {
+                console.warn('加载站点预设失败:', error);
+            }
+        }
+
+        function applySitePreset(domain) {
+            if (!domain) {
+                return;
+            }
+            const urlInput = document.getElementById('site-url');
+            const nameInput = document.getElementById('site-name');
+            const trackerInput = document.getElementById('site-tracker');
+            if (urlInput) {
+                urlInput.value = `https://${domain}`;
+            }
+            if (nameInput && !nameInput.value) {
+                nameInput.value = domain;
+            }
+            if (trackerInput && !trackerInput.value) {
+                trackerInput.value = domain;
+            }
+        }
+
         function showAddSiteModal() {
             document.getElementById('site-name').value = '';
             document.getElementById('site-url').value = '';
@@ -3770,6 +3814,10 @@
             document.getElementById('site-reannounce-source').value = 'auto';
             document.getElementById('site-enable-dl-limit').checked = true;
             document.getElementById('site-enable-reannounce-opt').checked = true;
+            const presetSelect = document.getElementById('site-preset-select');
+            if (presetSelect) {
+                presetSelect.value = '';
+            }
             showModal('add-site-modal');
         }
 
@@ -5224,6 +5272,7 @@
                 loadDashboard();
             }
             loadInstances();
+            loadSitePresets();
             
             // Auto refresh dashboard every 10 seconds
             setInterval(() => {
