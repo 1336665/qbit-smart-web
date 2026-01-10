@@ -1457,6 +1457,43 @@
             gap: 1rem;
         }
 
+        .rule-group {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .rule-group-header {
+            padding: 0.85rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            background: var(--bg-tertiary);
+        }
+
+        .rule-group-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .rule-group-toggle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .rule-group-body {
+            padding: 0.75rem 1rem 0.25rem;
+        }
+
+        .rule-group-body.collapsed {
+            display: none;
+        }
+
         .rule-info {
             flex: 1;
         }
@@ -1748,7 +1785,7 @@
                             </div>
                         </div>
                         <div class="card-subtitle" style="padding: 0 1.5rem 1rem; color: var(--text-muted); font-size: 0.8rem;">
-                            系统内置8个删种规则，按优先级P100→P15执行。删种前会自动强制汇报一次，避免丢失上传。
+                            系统内置5个删种规则，按优先级P100→P30执行。删种前会自动强制汇报一次，避免丢失上传。
                         </div>
                         <div id="remove-rules-list">
                             <div class="loading">
@@ -2172,6 +2209,15 @@
                 <button class="modal-close" onclick="closeModal('add-site-modal')">✕</button>
             </div>
             <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">站点预设</label>
+                    <select class="form-input" id="site-preset-select" onchange="applySitePreset(this.value)">
+                        <option value="">选择预设（可选）</option>
+                    </select>
+                    <div class="preset-hint" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                        ⓘ 选择预设会自动填充站点URL/名称/Tracker关键词
+                    </div>
+                </div>
                 <div class="form-group">
                     <label class="form-label">站点名称 *</label>
                     <input type="text" class="form-input" id="site-name" placeholder="如: U2">
@@ -3310,18 +3356,25 @@
             // 检查是否已存在
             let modal = document.getElementById(id);
             if (modal) {
-                modal.querySelector('.modal-content > div:last-child').innerHTML = content;
+                const titleEl = modal.querySelector('.modal-title');
+                if (titleEl) {
+                    titleEl.textContent = title;
+                }
+                const bodyEl = modal.querySelector('.modal-body');
+                if (bodyEl) {
+                    bodyEl.innerHTML = content;
+                }
             } else {
                 modal = document.createElement('div');
                 modal.id = id;
-                modal.className = 'modal active';
+                modal.className = 'modal-overlay active';
                 modal.innerHTML = `
-                    <div class="modal-content" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal">
                         <div class="modal-header">
-                            <h3>${title}</h3>
+                            <h3 class="modal-title">${title}</h3>
                             <button class="modal-close" onclick="closeModal('${id}')">&times;</button>
                         </div>
-                        <div>${content}</div>
+                        <div class="modal-body">${content}</div>
                     </div>
                 `;
                 document.body.appendChild(modal);
@@ -3753,6 +3806,41 @@
                 sites.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
         }
 
+        async function loadSitePresets() {
+            const select = document.getElementById('site-preset-select');
+            if (!select) {
+                return;
+            }
+            try {
+                const presets = await api('/pt/site_presets');
+                const options = presets.map(preset => {
+                    const label = `${preset.domain} (${preset.site_type || 'unknown'})`;
+                    return `<option value="${preset.domain}">${label}</option>`;
+                }).join('');
+                select.innerHTML = `<option value="">选择预设（可选）</option>${options}`;
+            } catch (error) {
+                console.warn('加载站点预设失败:', error);
+            }
+        }
+
+        function applySitePreset(domain) {
+            if (!domain) {
+                return;
+            }
+            const urlInput = document.getElementById('site-url');
+            const nameInput = document.getElementById('site-name');
+            const trackerInput = document.getElementById('site-tracker');
+            if (urlInput) {
+                urlInput.value = `https://${domain}`;
+            }
+            if (nameInput && !nameInput.value) {
+                nameInput.value = domain;
+            }
+            if (trackerInput && !trackerInput.value) {
+                trackerInput.value = domain;
+            }
+        }
+
         function showAddSiteModal() {
             document.getElementById('site-name').value = '';
             document.getElementById('site-url').value = '';
@@ -3763,6 +3851,10 @@
             document.getElementById('site-reannounce-source').value = 'auto';
             document.getElementById('site-enable-dl-limit').checked = true;
             document.getElementById('site-enable-reannounce-opt').checked = true;
+            const presetSelect = document.getElementById('site-preset-select');
+            if (presetSelect) {
+                presetSelect.value = '';
+            }
             showModal('add-site-modal');
         }
 
@@ -4242,31 +4334,79 @@
                         </div>
                     `;
                 } else {
-                    container.innerHTML = rules.map(rule => {
-                        const isBuiltin = rule.builtin === 1;
-                        return `
-                        <div class="rule-card ${isBuiltin ? 'rule-builtin' : ''}">
-                            <div class="rule-info">
-                                <div class="rule-name">
-                                    ${rule.name}
-                                    <span class="rule-priority">P${rule.priority}</span>
-                                    ${isBuiltin ? '<span class="badge badge-info">内置</span>' : ''}
+                    const grouped = {};
+                    const categoryOrder = ['慢车', '黑车', '低收益', '长时间', '空间不足', '自定义'];
+                    const ruleCategory = (rule) => {
+                        if (rule.builtin === 1) {
+                            const name = rule.name || '';
+                            if (name.includes('慢车')) return '慢车';
+                            if (name.includes('黑车')) return '黑车';
+                            if (name.includes('低收益')) return '低收益';
+                            if (name.includes('长时间')) return '长时间';
+                            if (name.includes('空间不足')) return '空间不足';
+                            return '内置';
+                        }
+                        return '自定义';
+                    };
+                    rules.forEach(rule => {
+                        const category = ruleCategory(rule);
+                        if (!grouped[category]) {
+                            grouped[category] = [];
+                        }
+                        grouped[category].push(rule);
+                    });
+                    const categories = categoryOrder.filter(c => grouped[c] && grouped[c].length)
+                        .concat(Object.keys(grouped).filter(c => !categoryOrder.includes(c)));
+                    container.innerHTML = categories.map((category, index) => {
+                        const groupId = `remove-group-${index}`;
+                        const rulesHtml = grouped[category].map(rule => {
+                            const isBuiltin = rule.builtin === 1;
+                            return `
+                            <div class="rule-card ${isBuiltin ? 'rule-builtin' : ''}">
+                                <div class="rule-info">
+                                    <div class="rule-name">
+                                        ${rule.name}
+                                        <span class="rule-priority">P${rule.priority}</span>
+                                        ${isBuiltin ? '<span class="badge badge-info">内置</span>' : ''}
+                                    </div>
+                                    <div class="rule-description">${rule.description || '无描述'}</div>
                                 </div>
-                                <div class="rule-description">${rule.description || '无描述'}</div>
+                                <div class="rule-actions">
+                                    <label class="switch">
+                                        <input type="checkbox" ${rule.enabled ? 'checked' : ''} onchange="toggleRemoveRule(${rule.id}, this.checked)">
+                                        <span class="switch-slider"></span>
+                                    </label>
+                                    ${!isBuiltin ? `<button class="btn btn-danger btn-sm btn-icon" onclick="deleteRemoveRule(${rule.id})">🗑️</button>` : ''}
+                                </div>
                             </div>
-                            <div class="rule-actions">
-                                <label class="switch">
-                                    <input type="checkbox" ${rule.enabled ? 'checked' : ''} onchange="toggleRemoveRule(${rule.id}, this.checked)">
-                                    <span class="switch-slider"></span>
-                                </label>
-                                ${!isBuiltin ? `<button class="btn btn-danger btn-sm btn-icon" onclick="deleteRemoveRule(${rule.id})">🗑️</button>` : ''}
+                        `;
+                        }).join('');
+                        return `
+                        <div class="rule-group">
+                            <div class="rule-group-header" onclick="toggleRemoveGroup('${groupId}')">
+                                <div class="rule-group-title">📂 ${category}</div>
+                                <div class="rule-group-toggle" id="${groupId}-toggle">收起</div>
+                            </div>
+                            <div class="rule-group-body" id="${groupId}">
+                                ${rulesHtml}
                             </div>
                         </div>
-                    `}).join('');
+                        `;
+                    }).join('');
                 }
             } catch (error) {
                 showToast('加载规则失败: ' + error.message, 'error');
             }
+        }
+
+        function toggleRemoveGroup(id) {
+            const body = document.getElementById(id);
+            const toggle = document.getElementById(`${id}-toggle`);
+            if (!body || !toggle) {
+                return;
+            }
+            body.classList.toggle('collapsed');
+            toggle.textContent = body.classList.contains('collapsed') ? '展开' : '收起';
         }
 
         function showAddRemoveRuleModal() {
@@ -4335,7 +4475,7 @@
         }
         
         async function resetBuiltinRules() {
-            if (!confirm('确定要重置所有内置删种规则吗？这将恢复默认的8个内置规则。')) return;
+            if (!confirm('确定要重置所有内置删种规则吗？这将恢复默认的5个内置规则。')) return;
             
             try {
                 await api('/remove/rules/reset', { method: 'POST' });
@@ -5217,6 +5357,7 @@
                 loadDashboard();
             }
             loadInstances();
+            loadSitePresets();
             
             // Auto refresh dashboard every 10 seconds
             setInterval(() => {
