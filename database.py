@@ -21,77 +21,49 @@ from contextlib import contextmanager
 # 内置删种规则定义
 BUILTIN_REMOVE_RULES = [
     {
-        'name': '🚨 紧急空间不足',
-        'description': '剩余空间<5GB且上传速度<5MiB/s时删除',
+        'name': '🐢 慢车',
+        'description': '做种超过2天且上传速度<150KiB/s时删除',
         'condition': json.dumps({
-            'free_space_lt': 5 * 1024 * 1024 * 1024,
-            'upload_speed_lt': 5 * 1024 * 1024,
-        }),
-        'priority': 100,
-    },
-    {
-        'name': '⚠️ 空间紧张',
-        'description': '剩余空间<10GB且上传速度<1MiB/s时删除',
-        'condition': json.dumps({
-            'free_space_lt': 10 * 1024 * 1024 * 1024,
-            'upload_speed_lt': 1024 * 1024,
-        }),
-        'priority': 80,
-    },
-    {
-        'name': '📉 空间警告',
-        'description': '剩余空间<20GB、已完成且上传速度<512KiB/s时删除',
-        'condition': json.dumps({
-            'free_space_lt': 20 * 1024 * 1024 * 1024,
-            'completed': True,
-            'upload_speed_lt': 512 * 1024,
+            'seeding_time_gt': 2 * 24 * 3600,
+            'upload_speed_lt': 150 * 1024,
         }),
         'priority': 60,
     },
     {
-        'name': '⏰ 做种时间过长',
-        'description': '做种超过7天且分享率>2时删除',
+        'name': '🧊 黑车',
+        'description': '无连接超过4小时且已完成时删除',
         'condition': json.dumps({
-            'seeding_time_gt': 7 * 24 * 3600,
-            'ratio_gt': 2.0,
+            'no_peers_time_gt': 4 * 3600,
+            'completed': True,
         }),
-        'priority': 40,
+        'priority': 80,
     },
     {
-        'name': '🐢 低速种子',
-        'description': '做种超过3天且上传速度<100KiB/s时删除',
+        'name': '📉 低收益',
+        'description': '做种超过3天且分享率<0.5时删除',
         'condition': json.dumps({
             'seeding_time_gt': 3 * 24 * 3600,
-            'upload_speed_lt': 100 * 1024,
+            'ratio_lt': 0.5,
+        }),
+        'priority': 50,
+    },
+    {
+        'name': '⏰ 长时间',
+        'description': '做种超过10天且分享率>1.5时删除',
+        'condition': json.dumps({
+            'seeding_time_gt': 10 * 24 * 3600,
+            'ratio_gt': 1.5,
         }),
         'priority': 30,
     },
     {
-        'name': '📦 超大种子',
-        'description': '种子>100GB、做种超过24小时且分享率>1时删除',
+        'name': '🚨 空间不足',
+        'description': '剩余空间<30GB且上传速度<1MiB/s时删除',
         'condition': json.dumps({
-            'size_gt': 100 * 1024 * 1024 * 1024,
-            'seeding_time_gt': 24 * 3600,
-            'ratio_gt': 1.0,
+            'free_space_lt': 30 * 1024 * 1024 * 1024,
+            'upload_speed_lt': 1024 * 1024,
         }),
-        'priority': 25,
-    },
-    {
-        'name': '📈 高分享率',
-        'description': '分享率超过5.0时删除',
-        'condition': json.dumps({
-            'ratio_gt': 5.0,
-        }),
-        'priority': 20,
-    },
-    {
-        'name': '❄️ 冷门种子',
-        'description': '无连接超过6小时且已完成时删除',
-        'condition': json.dumps({
-            'no_peers_time_gt': 6 * 3600,
-            'completed': True,
-        }),
-        'priority': 15,
+        'priority': 100,
     },
 ]
 
