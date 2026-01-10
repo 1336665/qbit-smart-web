@@ -916,6 +916,7 @@ class PrecisionLimitEngine:
 
         # update qB props cache
         self._get_props(inst_id, state, now)
+        self._ensure_reannounce_source(state)
 
         tl = state.get_tl(now)
 
@@ -1201,6 +1202,14 @@ class PrecisionLimitEngine:
                         pass
             except Exception:
                 logger.debug("peer worker error", exc_info=True)
+
+    def _ensure_reannounce_source(self, state: TorrentLimitState) -> None:
+        source_mode = self._get_reannounce_source_mode(state)
+        if source_mode == 'site':
+            if self._has_helper_for_state(state):
+                state.reannounce_source = 'site'
+        elif source_mode == 'qb_api':
+            state.reannounce_source = 'qb_api'
 
     def _get_reannounce_source_mode(self, state: TorrentLimitState) -> str:
         site = self._cache_sites_by_id.get(state.site_id) if state.site_id is not None else None
