@@ -41,7 +41,7 @@ from notifier import create_notifier
 
 # 尝试导入可选模块
 try:
-from pt_site_helper import create_helper_manager, PTSiteHelperManager, SITE_PRESETS
+    from pt_site_helper import create_helper_manager, PTSiteHelperManager, SITE_PRESETS
     PT_HELPER_AVAILABLE = True
 except ImportError:
     PT_HELPER_AVAILABLE = False
