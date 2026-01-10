@@ -1457,6 +1457,43 @@
             gap: 1rem;
         }
 
+        .rule-group {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .rule-group-header {
+            padding: 0.85rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            background: var(--bg-tertiary);
+        }
+
+        .rule-group-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .rule-group-toggle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .rule-group-body {
+            padding: 0.75rem 1rem 0.25rem;
+        }
+
+        .rule-group-body.collapsed {
+            display: none;
+        }
+
         .rule-info {
             flex: 1;
         }
@@ -4297,31 +4334,79 @@
                         </div>
                     `;
                 } else {
-                    container.innerHTML = rules.map(rule => {
-                        const isBuiltin = rule.builtin === 1;
-                        return `
-                        <div class="rule-card ${isBuiltin ? 'rule-builtin' : ''}">
-                            <div class="rule-info">
-                                <div class="rule-name">
-                                    ${rule.name}
-                                    <span class="rule-priority">P${rule.priority}</span>
-                                    ${isBuiltin ? '<span class="badge badge-info">内置</span>' : ''}
+                    const grouped = {};
+                    const categoryOrder = ['慢车', '黑车', '低收益', '长时间', '空间不足', '自定义'];
+                    const ruleCategory = (rule) => {
+                        if (rule.builtin === 1) {
+                            const name = rule.name || '';
+                            if (name.includes('慢车')) return '慢车';
+                            if (name.includes('黑车')) return '黑车';
+                            if (name.includes('低收益')) return '低收益';
+                            if (name.includes('长时间')) return '长时间';
+                            if (name.includes('空间不足')) return '空间不足';
+                            return '内置';
+                        }
+                        return '自定义';
+                    };
+                    rules.forEach(rule => {
+                        const category = ruleCategory(rule);
+                        if (!grouped[category]) {
+                            grouped[category] = [];
+                        }
+                        grouped[category].push(rule);
+                    });
+                    const categories = categoryOrder.filter(c => grouped[c] && grouped[c].length)
+                        .concat(Object.keys(grouped).filter(c => !categoryOrder.includes(c)));
+                    container.innerHTML = categories.map((category, index) => {
+                        const groupId = `remove-group-${index}`;
+                        const rulesHtml = grouped[category].map(rule => {
+                            const isBuiltin = rule.builtin === 1;
+                            return `
+                            <div class="rule-card ${isBuiltin ? 'rule-builtin' : ''}">
+                                <div class="rule-info">
+                                    <div class="rule-name">
+                                        ${rule.name}
+                                        <span class="rule-priority">P${rule.priority}</span>
+                                        ${isBuiltin ? '<span class="badge badge-info">内置</span>' : ''}
+                                    </div>
+                                    <div class="rule-description">${rule.description || '无描述'}</div>
                                 </div>
-                                <div class="rule-description">${rule.description || '无描述'}</div>
+                                <div class="rule-actions">
+                                    <label class="switch">
+                                        <input type="checkbox" ${rule.enabled ? 'checked' : ''} onchange="toggleRemoveRule(${rule.id}, this.checked)">
+                                        <span class="switch-slider"></span>
+                                    </label>
+                                    ${!isBuiltin ? `<button class="btn btn-danger btn-sm btn-icon" onclick="deleteRemoveRule(${rule.id})">🗑️</button>` : ''}
+                                </div>
                             </div>
-                            <div class="rule-actions">
-                                <label class="switch">
-                                    <input type="checkbox" ${rule.enabled ? 'checked' : ''} onchange="toggleRemoveRule(${rule.id}, this.checked)">
-                                    <span class="switch-slider"></span>
-                                </label>
-                                ${!isBuiltin ? `<button class="btn btn-danger btn-sm btn-icon" onclick="deleteRemoveRule(${rule.id})">🗑️</button>` : ''}
+                        `;
+                        }).join('');
+                        return `
+                        <div class="rule-group">
+                            <div class="rule-group-header" onclick="toggleRemoveGroup('${groupId}')">
+                                <div class="rule-group-title">📂 ${category}</div>
+                                <div class="rule-group-toggle" id="${groupId}-toggle">收起</div>
+                            </div>
+                            <div class="rule-group-body" id="${groupId}">
+                                ${rulesHtml}
                             </div>
                         </div>
-                    `}).join('');
+                        `;
+                    }).join('');
                 }
             } catch (error) {
                 showToast('加载规则失败: ' + error.message, 'error');
             }
+        }
+
+        function toggleRemoveGroup(id) {
+            const body = document.getElementById(id);
+            const toggle = document.getElementById(`${id}-toggle`);
+            if (!body || !toggle) {
+                return;
+            }
+            body.classList.toggle('collapsed');
+            toggle.textContent = body.classList.contains('collapsed') ? '展开' : '收起';
         }
 
         function showAddRemoveRuleModal() {
@@ -4390,7 +4475,7 @@
         }
         
         async function resetBuiltinRules() {
-            if (!confirm('确定要重置所有内置删种规则吗？这将恢复默认的8个内置规则。')) return;
+            if (!confirm('确定要重置所有内置删种规则吗？这将恢复默认的5个内置规则。')) return;
             
             try {
                 await api('/remove/rules/reset', { method: 'POST' });
