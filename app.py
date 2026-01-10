@@ -41,7 +41,7 @@ from notifier import create_notifier
 
 # 尝试导入可选模块
 try:
-    from pt_site_helper import create_helper_manager, PTSiteHelperManager
+    from pt_site_helper import create_helper_manager, PTSiteHelperManager, SITE_PRESETS
     PT_HELPER_AVAILABLE = True
 except ImportError:
     PT_HELPER_AVAILABLE = False
@@ -378,11 +378,11 @@ def api_dashboard():
         # 限速引擎状态 - 综合检查配置和运行状态
         smart_limit_enabled = db.get_config('smart_limit_enabled') == 'true'
         
-        # 使用is_running()方法检查运行状态（更可靠）
+        # 使用is_running属性检查运行状态（更可靠）
         limit_running = False
         if limit_engine is not None:
             try:
-                limit_running = limit_engine.is_running()
+                limit_running = limit_engine.is_running
             except:
                 limit_running = hasattr(limit_engine, '_running') and limit_engine._running
         
@@ -401,7 +401,7 @@ def api_dashboard():
                     except Exception:
                         pass
                     logger.info(f"限速引擎实例创建完成: {limit_engine is not None}")
-                if limit_engine and not limit_engine.is_running():
+                if limit_engine and not limit_engine.is_running:
                     limit_engine.start()
                     limit_running = True
                     try:
@@ -689,6 +689,20 @@ def api_pt_sites():
     """获取所有PT站点"""
     sites = db.get_pt_sites()
     return jsonify(sites)
+
+
+@app.route('/api/pt/site_presets', methods=['GET'])
+@login_required
+def api_pt_site_presets():
+    """获取PT站点预设列表"""
+    presets = []
+    for domain, config in SITE_PRESETS.items():
+        presets.append({
+            'domain': domain,
+            'site_type': getattr(config.get('site_type'), 'value', str(config.get('site_type', 'unknown'))),
+        })
+    presets.sort(key=lambda item: item['domain'])
+    return jsonify(presets)
 
 
 @app.route('/api/pt/sites', methods=['POST'])
@@ -1011,7 +1025,7 @@ def api_set_config():
                     limit_engine = create_precision_limit_engine(
                         db, qb_manager, site_manager, notifier
                     )
-                if not limit_engine.is_running():
+                if not limit_engine.is_running:
                     limit_engine.start()
                 # 注入上下文，确保 Telegram 命令可控制最新实例
                 try:
@@ -1020,6 +1034,7 @@ def api_set_config():
                     pass
                 db.add_log('INFO', '限速引擎已启动')
             except Exception as e:
+                logger.exception("限速引擎启动失败")
                 db.add_log('ERROR', f'限速引擎启动失败: {e}')
                 return jsonify({'success': False, 'error': '限速引擎启动失败'}), 500
         else:
@@ -1028,6 +1043,7 @@ def api_set_config():
                     limit_engine.stop()
                 db.add_log('INFO', '限速引擎已停止')
             except Exception as e:
+                logger.exception("限速引擎停止失败")
                 db.add_log('ERROR', f'限速引擎停止失败: {e}')
                 return jsonify({'success': False, 'error': '限速引擎停止失败'}), 500
     
