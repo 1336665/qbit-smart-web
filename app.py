@@ -378,11 +378,11 @@ def api_dashboard():
         # 限速引擎状态 - 综合检查配置和运行状态
         smart_limit_enabled = db.get_config('smart_limit_enabled') == 'true'
         
-        # 使用is_running()方法检查运行状态（更可靠）
+        # 使用is_running属性检查运行状态（更可靠）
         limit_running = False
         if limit_engine is not None:
             try:
-                limit_running = limit_engine.is_running()
+                limit_running = limit_engine.is_running
             except:
                 limit_running = hasattr(limit_engine, '_running') and limit_engine._running
         
@@ -401,7 +401,7 @@ def api_dashboard():
                     except Exception:
                         pass
                     logger.info(f"限速引擎实例创建完成: {limit_engine is not None}")
-                if limit_engine and not limit_engine.is_running():
+                if limit_engine and not limit_engine.is_running:
                     limit_engine.start()
                     limit_running = True
                     try:
@@ -1025,7 +1025,7 @@ def api_set_config():
                     limit_engine = create_precision_limit_engine(
                         db, qb_manager, site_manager, notifier
                     )
-                if not limit_engine.is_running():
+                if not limit_engine.is_running:
                     limit_engine.start()
                 # 注入上下文，确保 Telegram 命令可控制最新实例
                 try:
