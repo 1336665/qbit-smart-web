@@ -879,6 +879,11 @@ class PrecisionLimitEngine:
         except Exception:
             ra = None
         if ra and 0 < ra < LimitConfig.MAX_REANNOUNCE:
+            source_mode = self._get_reannounce_source_mode(state)
+            if source_mode == 'site':
+                return
+            if source_mode == 'auto' and state.reannounce_source == 'site':
+                return
             state.cached_time_left = ra
             state.cache_ts = now
             state.reannounce_source = 'qb_api'
@@ -1160,6 +1165,9 @@ class PrecisionLimitEngine:
             state = self._states.get(h)
             if not state or not state.tid:
                 continue
+            source_mode = self._get_reannounce_source_mode(state)
+            if source_mode == 'qb_api':
+                continue
             try:
                 helper = None
                 if state.site_id is not None:
@@ -1193,6 +1201,13 @@ class PrecisionLimitEngine:
                         pass
             except Exception:
                 logger.debug("peer worker error", exc_info=True)
+
+    def _get_reannounce_source_mode(self, state: TorrentLimitState) -> str:
+        site = self._cache_sites_by_id.get(state.site_id) if state.site_id is not None else None
+        mode = (site.get('reannounce_source') if site else None) or 'auto'
+        if mode not in ('auto', 'site', 'qb_api'):
+            mode = 'auto'
+        return mode
 
     # ---------------------------------------------------------------------
     # cycle report & persistence
