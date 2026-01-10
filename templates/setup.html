@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>初始设置 - qBit Smart Web</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: rgba(17, 24, 39, 0.9);
+            --bg-tertiary: rgba(26, 34, 52, 0.9);
+            --bg-card: linear-gradient(145deg, rgba(21, 29, 46, 0.92) 0%, rgba(15, 22, 33, 0.86) 100%);
+            --bg-surface: rgba(15, 23, 42, 0.7);
+            --border-color: rgba(56, 189, 248, 0.18);
+            --border-glow: rgba(56, 189, 248, 0.35);
+            --border-soft: rgba(148, 163, 184, 0.12);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-cyan: #22d3ee;
+            --accent-blue: #3b82f6;
+            --accent-purple: #a855f7;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --gradient-primary: linear-gradient(135deg, #22d3ee 0%, #3b82f6 50%, #a855f7 100%);
+            --gradient-glow: radial-gradient(ellipse at 50% 0%, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+            --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 40px rgba(34, 211, 238, 0.15);
+            --shadow-soft: 0 12px 24px -18px rgba(15, 23, 42, 0.8);
+            --radius-xl: 20px;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --transition-base: 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100vh;
+            background: var(--gradient-glow);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.08), transparent 45%),
+                radial-gradient(circle at 80% 0%, rgba(168, 85, 247, 0.08), transparent 40%),
+                linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+            background-size: auto, auto, 40px 40px, 40px 40px;
+            opacity: 0.4;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .setup-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 420px;
+            padding: 2rem;
+        }
+
+        .setup-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 2.5rem;
+            box-shadow: var(--shadow-lg), var(--shadow-glow), var(--shadow-soft);
+            backdrop-filter: blur(14px);
+        }
+
+        .logo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo-icon {
+            width: 72px;
+            height: 72px;
+            background: var(--gradient-primary);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 8px 30px rgba(34, 211, 238, 0.35);
+            margin-bottom: 1rem;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .setup-title {
+            text-align: center;
+            font-size: 1.125rem;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+
+        .setup-title span {
+            color: var(--accent-cyan);
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: rgba(10, 14, 23, 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all var(--transition-base);
+            outline: none;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+
+        .form-input:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 1rem;
+            background: var(--gradient-primary);
+            border: none;
+            border-radius: var(--radius-md);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 0.5rem;
+        }
+
+        .btn-submit:focus-visible {
+            outline: 2px solid rgba(34, 211, 238, 0.6);
+            outline-offset: 2px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 211, 238, 0.4);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-msg {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: var(--radius-md);
+            padding: 0.75rem 1rem;
+            color: var(--accent-red);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .error-msg.show {
+            display: block;
+        }
+
+        .password-strength {
+            height: 4px;
+            background: var(--bg-secondary);
+            border-radius: 999px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .password-strength-bar {
+            height: 100%;
+            width: 0;
+            transition: all 0.3s ease;
+            border-radius: 999px;
+        }
+
+        .strength-weak { width: 33%; background: var(--accent-red); }
+        .strength-medium { width: 66%; background: var(--accent-yellow); }
+        .strength-strong { width: 100%; background: var(--accent-green); }
+
+        .tips {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-soft);
+        }
+
+        .tips-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+        }
+
+        .tips-list {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        .tips-list li {
+            list-style: none;
+            padding-left: 1.25rem;
+            position: relative;
+        }
+
+        .tips-list li::before {
+            content: '✦';
+            position: absolute;
+            left: 0;
+            color: var(--accent-cyan);
+            font-size: 0.6rem;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .shake {
+            animation: shake 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="setup-card">
+            <div class="logo">
+                <div class="logo-icon">⚡</div>
+                <div class="logo-text">qBit Smart Web</div>
+                <div class="logo-subtitle">智能 PT 管理平台</div>
+            </div>
+
+            <div class="setup-title">欢迎！请设置<span>管理密码</span></div>
+
+            <div class="error-msg" id="errorMsg"></div>
+
+            <form id="setupForm">
+                <div class="form-group">
+                    <label class="form-label">设置密码</label>
+                    <input type="password" class="form-input" id="password" 
+                           placeholder="输入管理密码" autocomplete="new-password" required>
+                    <div class="password-strength">
+                        <div class="password-strength-bar" id="strengthBar"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">确认密码</label>
+                    <input type="password" class="form-input" id="confirmPassword" 
+                           placeholder="再次输入密码" autocomplete="new-password" required>
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">
+                    完成设置
+                </button>
+            </form>
+
+            <div class="tips">
+                <div class="tips-title">安全提示</div>
+                <ul class="tips-list">
+                    <li>密码至少 4 位字符</li>
+                    <li>建议使用字母、数字组合</li>
+                    <li>请妥善保管您的密码</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('setupForm');
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirmPassword');
+        const submitBtn = document.getElementById('submitBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const strengthBar = document.getElementById('strengthBar');
+
+        password.addEventListener('input', () => {
+            const val = password.value;
+            strengthBar.className = 'password-strength-bar';
+            if (val.length >= 8 && /[A-Za-z]/.test(val) && /[0-9]/.test(val)) {
+                strengthBar.classList.add('strength-strong');
+            } else if (val.length >= 6) {
+                strengthBar.classList.add('strength-medium');
+            } else if (val.length >= 4) {
+                strengthBar.classList.add('strength-weak');
+            }
+        });
+
+        function showError(msg) {
+            errorMsg.textContent = msg;
+            errorMsg.classList.add('show');
+            errorMsg.classList.add('shake');
+            setTimeout(() => errorMsg.classList.remove('shake'), 300);
+        }
+
+        function hideError() {
+            errorMsg.classList.remove('show');
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideError();
+
+            const pwd = password.value;
+            const confirmPwd = confirmPassword.value;
+
+            if (pwd.length < 4) {
+                showError('密码至少 4 位字符');
+                return;
+            }
+
+            if (pwd !== confirmPwd) {
+                showError('两次输入的密码不一致');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = '设置中...';
+
+            try {
+                const res = await fetch('/api/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pwd })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    window.location.href = '/';
+                } else {
+                    showError(data.error || '设置失败');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '完成设置';
+                }
+            } catch (err) {
+                showError('网络错误，请重试');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '完成设置';
+            }
+        });
+    </script>
+</body>
+</html>
