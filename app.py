@@ -1034,6 +1034,7 @@ def api_set_config():
                     pass
                 db.add_log('INFO', '限速引擎已启动')
             except Exception as e:
+                logger.exception("限速引擎启动失败")
                 db.add_log('ERROR', f'限速引擎启动失败: {e}')
                 return jsonify({'success': False, 'error': '限速引擎启动失败'}), 500
         else:
@@ -1042,6 +1043,7 @@ def api_set_config():
                     limit_engine.stop()
                 db.add_log('INFO', '限速引擎已停止')
             except Exception as e:
+                logger.exception("限速引擎停止失败")
                 db.add_log('ERROR', f'限速引擎停止失败: {e}')
                 return jsonify({'success': False, 'error': '限速引擎停止失败'}), 500
     
