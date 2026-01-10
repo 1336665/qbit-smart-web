@@ -1065,6 +1065,10 @@ class PrecisionLimitEngine:
             self.qb_manager.reannounce(inst_id, state.hash)
         except Exception:
             return
+        state.cached_time_left = 0.0
+        state.cache_ts = 0.0
+        state.prev_time_left = 0.0
+        state.reannounce_source = ''
         state.last_reannounce = time.time()
         state.reannounced_this_cycle = True
         state.waiting_reannounce = False
