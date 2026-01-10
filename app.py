@@ -41,7 +41,7 @@ from notifier import create_notifier
 
 # 尝试导入可选模块
 try:
-    from pt_site_helper import create_helper_manager, PTSiteHelperManager
+    from pt_site_helper import create_helper_manager, PTSiteHelperManager, SITE_PRESETS
     PT_HELPER_AVAILABLE = True
 except ImportError:
     PT_HELPER_AVAILABLE = False
@@ -689,6 +689,20 @@ def api_pt_sites():
     """获取所有PT站点"""
     sites = db.get_pt_sites()
     return jsonify(sites)
+
+
+@app.route('/api/pt/site_presets', methods=['GET'])
+@login_required
+def api_pt_site_presets():
+    """获取PT站点预设列表"""
+    presets = []
+    for domain, config in SITE_PRESETS.items():
+        presets.append({
+            'domain': domain,
+            'site_type': getattr(config.get('site_type'), 'value', str(config.get('site_type', 'unknown'))),
+        })
+    presets.sort(key=lambda item: item['domain'])
+    return jsonify(presets)
 
 
 @app.route('/api/pt/sites', methods=['POST'])

@@ -453,11 +453,14 @@ class Database:
     # ════════════════════════════════════════════════════════════════════
     # PT站点管理
     # ════════════════════════════════════════════════════════════════════
-    def get_pt_sites(self) -> List[Dict]:
+    def get_pt_sites(self, enabled_only: bool = False) -> List[Dict]:
         """获取所有PT站点"""
         with self.get_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT * FROM pt_sites ORDER BY id')
+            if enabled_only:
+                cursor.execute('SELECT * FROM pt_sites WHERE enabled = 1 ORDER BY id')
+            else:
+                cursor.execute('SELECT * FROM pt_sites ORDER BY id')
             return [dict(row) for row in cursor.fetchall()]
     
     def get_pt_site(self, site_id: int) -> Optional[Dict]:
@@ -584,16 +587,25 @@ class Database:
     # ════════════════════════════════════════════════════════════════════
     # 限速规则管理
     # ════════════════════════════════════════════════════════════════════
-    def get_speed_rules(self) -> List[Dict]:
+    def get_speed_rules(self, enabled_only: bool = False) -> List[Dict]:
         """获取所有限速规则"""
         with self.get_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute('''
-                SELECT sr.*, ps.name as site_name
-                FROM speed_rules sr
-                LEFT JOIN pt_sites ps ON sr.site_id = ps.id
-                ORDER BY sr.priority DESC, sr.id
-            ''')
+            if enabled_only:
+                cursor.execute('''
+                    SELECT sr.*, ps.name as site_name
+                    FROM speed_rules sr
+                    LEFT JOIN pt_sites ps ON sr.site_id = ps.id
+                    WHERE sr.enabled = 1
+                    ORDER BY sr.priority DESC, sr.id
+                ''')
+            else:
+                cursor.execute('''
+                    SELECT sr.*, ps.name as site_name
+                    FROM speed_rules sr
+                    LEFT JOIN pt_sites ps ON sr.site_id = ps.id
+                    ORDER BY sr.priority DESC, sr.id
+                ''')
             rules = [dict(row) for row in cursor.fetchall()]
             for rule in rules:
                 if rule.get('site_id') is not None:
