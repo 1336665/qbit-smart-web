@@ -3310,18 +3310,25 @@
             // 检查是否已存在
             let modal = document.getElementById(id);
             if (modal) {
-                modal.querySelector('.modal-content > div:last-child').innerHTML = content;
+                const titleEl = modal.querySelector('.modal-title');
+                if (titleEl) {
+                    titleEl.textContent = title;
+                }
+                const bodyEl = modal.querySelector('.modal-body');
+                if (bodyEl) {
+                    bodyEl.innerHTML = content;
+                }
             } else {
                 modal = document.createElement('div');
                 modal.id = id;
-                modal.className = 'modal active';
+                modal.className = 'modal-overlay active';
                 modal.innerHTML = `
-                    <div class="modal-content" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal">
                         <div class="modal-header">
-                            <h3>${title}</h3>
+                            <h3 class="modal-title">${title}</h3>
                             <button class="modal-close" onclick="closeModal('${id}')">&times;</button>
                         </div>
-                        <div>${content}</div>
+                        <div class="modal-body">${content}</div>
                     </div>
                 `;
                 document.body.appendChild(modal);
