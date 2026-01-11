@@ -1494,6 +1494,30 @@
             display: none;
         }
 
+        .remove-rule-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0 1.5rem 1rem;
+        }
+
+        .remove-rule-tab {
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .remove-rule-tab.active {
+            background: var(--gradient-primary);
+            color: white;
+            border-color: transparent;
+        }
+
         .rule-info {
             flex: 1;
         }
@@ -1784,14 +1808,23 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="card-subtitle" style="padding: 0 1.5rem 1rem; color: var(--text-muted); font-size: 0.8rem;">
-                            系统内置5个删种规则，按优先级P100→P30执行。删种前会自动强制汇报一次，避免丢失上传。
+                    <div class="card-subtitle" style="padding: 0 1.5rem 1rem; color: var(--text-muted); font-size: 0.8rem;">
+                        系统内置5个删种规则，按优先级P100→P30执行。删种前会自动强制汇报一次，避免丢失上传。
+                    </div>
+                    <div class="remove-rule-tabs" id="remove-rule-tabs">
+                        <button class="remove-rule-tab active" onclick="switchRemoveCategory('慢车')">慢车</button>
+                        <button class="remove-rule-tab" onclick="switchRemoveCategory('黑车')">黑车</button>
+                        <button class="remove-rule-tab" onclick="switchRemoveCategory('低收益')">低收益</button>
+                        <button class="remove-rule-tab" onclick="switchRemoveCategory('长时间')">长时间</button>
+                        <button class="remove-rule-tab" onclick="switchRemoveCategory('空间不足')">空间不足</button>
+                        <button class="remove-rule-tab" onclick="switchRemoveCategory('自定义')">自定义</button>
+                        <button class="remove-rule-tab" onclick="switchRemoveCategory('全部')">全部</button>
+                    </div>
+                    <div id="remove-rules-list">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
                         </div>
-                        <div id="remove-rules-list">
-                            <div class="loading">
-                                <div class="loading-spinner"></div>
-                            </div>
-                        </div>
+                    </div>
                     </div>
                 </section>
                 
@@ -4320,93 +4353,86 @@
         // ═══════════════════════════════════════════════════════════════════
         // Remove Rules
         // ═══════════════════════════════════════════════════════════════════
+        let _removeRules = [];
+        let _removeCategory = '慢车';
+
+        function switchRemoveCategory(category) {
+            _removeCategory = category;
+            const tabs = document.querySelectorAll('#remove-rule-tabs .remove-rule-tab');
+            tabs.forEach(tab => {
+                tab.classList.toggle('active', tab.textContent.trim() === category);
+            });
+            renderRemoveRules();
+        }
+
+        function renderRemoveRules() {
+            const container = document.getElementById('remove-rules-list');
+            if (!_removeRules || _removeRules.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🗑️</div>
+                        <div class="empty-state-title">暂无删种规则</div>
+                        <div class="empty-state-text">添加规则自动清理种子</div>
+                    </div>
+                `;
+                return;
+            }
+            const category = _removeCategory;
+            const ruleCategory = (rule) => {
+                if (rule.builtin === 1) {
+                    const name = rule.name || '';
+                    if (name.includes('慢车')) return '慢车';
+                    if (name.includes('黑车')) return '黑车';
+                    if (name.includes('低收益')) return '低收益';
+                    if (name.includes('长时间')) return '长时间';
+                    if (name.includes('空间不足')) return '空间不足';
+                    return '内置';
+                }
+                return '自定义';
+            };
+            const filtered = category === '全部'
+                ? _removeRules
+                : _removeRules.filter(rule => ruleCategory(rule) === category);
+            if (!filtered.length) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🗑️</div>
+                        <div class="empty-state-title">当前分类暂无规则</div>
+                        <div class="empty-state-text">可切换分类或添加规则</div>
+                    </div>
+                `;
+                return;
+            }
+            container.innerHTML = filtered.map(rule => {
+                const isBuiltin = rule.builtin === 1;
+                return `
+                <div class="rule-card ${isBuiltin ? 'rule-builtin' : ''}">
+                    <div class="rule-info">
+                        <div class="rule-name">
+                            ${rule.name}
+                            <span class="rule-priority">P${rule.priority}</span>
+                            ${isBuiltin ? '<span class="badge badge-info">内置</span>' : ''}
+                        </div>
+                        <div class="rule-description">${rule.description || '无描述'}</div>
+                    </div>
+                    <div class="rule-actions">
+                        <label class="switch">
+                            <input type="checkbox" ${rule.enabled ? 'checked' : ''} onchange="toggleRemoveRule(${rule.id}, this.checked)">
+                            <span class="switch-slider"></span>
+                        </label>
+                        ${!isBuiltin ? `<button class="btn btn-danger btn-sm btn-icon" onclick="deleteRemoveRule(${rule.id})">🗑️</button>` : ''}
+                    </div>
+                </div>
+            `}).join('');
+        }
+
         async function loadRemoveRules() {
             try {
-                const rules = await api('/remove/rules');
-                const container = document.getElementById('remove-rules-list');
-                
-                if (rules.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">🗑️</div>
-                            <div class="empty-state-title">暂无删种规则</div>
-                            <div class="empty-state-text">添加规则自动清理种子</div>
-                        </div>
-                    `;
-                } else {
-                    const grouped = {};
-                    const categoryOrder = ['慢车', '黑车', '低收益', '长时间', '空间不足', '自定义'];
-                    const ruleCategory = (rule) => {
-                        if (rule.builtin === 1) {
-                            const name = rule.name || '';
-                            if (name.includes('慢车')) return '慢车';
-                            if (name.includes('黑车')) return '黑车';
-                            if (name.includes('低收益')) return '低收益';
-                            if (name.includes('长时间')) return '长时间';
-                            if (name.includes('空间不足')) return '空间不足';
-                            return '内置';
-                        }
-                        return '自定义';
-                    };
-                    rules.forEach(rule => {
-                        const category = ruleCategory(rule);
-                        if (!grouped[category]) {
-                            grouped[category] = [];
-                        }
-                        grouped[category].push(rule);
-                    });
-                    const categories = categoryOrder.filter(c => grouped[c] && grouped[c].length)
-                        .concat(Object.keys(grouped).filter(c => !categoryOrder.includes(c)));
-                    container.innerHTML = categories.map((category, index) => {
-                        const groupId = `remove-group-${index}`;
-                        const rulesHtml = grouped[category].map(rule => {
-                            const isBuiltin = rule.builtin === 1;
-                            return `
-                            <div class="rule-card ${isBuiltin ? 'rule-builtin' : ''}">
-                                <div class="rule-info">
-                                    <div class="rule-name">
-                                        ${rule.name}
-                                        <span class="rule-priority">P${rule.priority}</span>
-                                        ${isBuiltin ? '<span class="badge badge-info">内置</span>' : ''}
-                                    </div>
-                                    <div class="rule-description">${rule.description || '无描述'}</div>
-                                </div>
-                                <div class="rule-actions">
-                                    <label class="switch">
-                                        <input type="checkbox" ${rule.enabled ? 'checked' : ''} onchange="toggleRemoveRule(${rule.id}, this.checked)">
-                                        <span class="switch-slider"></span>
-                                    </label>
-                                    ${!isBuiltin ? `<button class="btn btn-danger btn-sm btn-icon" onclick="deleteRemoveRule(${rule.id})">🗑️</button>` : ''}
-                                </div>
-                            </div>
-                        `;
-                        }).join('');
-                        return `
-                        <div class="rule-group">
-                            <div class="rule-group-header" onclick="toggleRemoveGroup('${groupId}')">
-                                <div class="rule-group-title">📂 ${category}</div>
-                                <div class="rule-group-toggle" id="${groupId}-toggle">收起</div>
-                            </div>
-                            <div class="rule-group-body" id="${groupId}">
-                                ${rulesHtml}
-                            </div>
-                        </div>
-                        `;
-                    }).join('');
-                }
+                _removeRules = await api('/remove/rules');
+                renderRemoveRules();
             } catch (error) {
                 showToast('加载规则失败: ' + error.message, 'error');
             }
-        }
-
-        function toggleRemoveGroup(id) {
-            const body = document.getElementById(id);
-            const toggle = document.getElementById(`${id}-toggle`);
-            if (!body || !toggle) {
-                return;
-            }
-            body.classList.toggle('collapsed');
-            toggle.textContent = body.classList.contains('collapsed') ? '展开' : '收起';
         }
 
         function showAddRemoveRuleModal() {
