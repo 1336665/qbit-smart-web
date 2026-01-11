@@ -1457,6 +1457,67 @@
             gap: 1rem;
         }
 
+        .rule-group {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .rule-group-header {
+            padding: 0.85rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            background: var(--bg-tertiary);
+        }
+
+        .rule-group-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .rule-group-toggle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .rule-group-body {
+            padding: 0.75rem 1rem 0.25rem;
+        }
+
+        .rule-group-body.collapsed {
+            display: none;
+        }
+
+        .remove-rule-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0 1.5rem 1rem;
+        }
+
+        .remove-rule-tab {
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .remove-rule-tab.active {
+            background: var(--gradient-primary);
+            color: white;
+            border-color: transparent;
+        }
+
         .rule-info {
             flex: 1;
         }
@@ -1739,6 +1800,9 @@
                                 删种规则
                             </h3>
                             <div style="display: flex; gap: 0.5rem;">
+                                <button class="btn btn-info btn-sm" onclick="showRemoveCategoryModal()" title="查看档位">
+                                    ⚙️ 档位设置
+                                </button>
                                 <button class="btn btn-secondary btn-sm" onclick="resetBuiltinRules()" title="重置内置规则">
                                     🔄 重置内置
                                 </button>
@@ -1747,14 +1811,23 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="card-subtitle" style="padding: 0 1.5rem 1rem; color: var(--text-muted); font-size: 0.8rem;">
-                            系统内置8个删种规则，按优先级P100→P15执行。删种前会自动强制汇报一次，避免丢失上传。
+                    <div class="card-subtitle" style="padding: 0 1.5rem 1rem; color: var(--text-muted); font-size: 0.8rem;">
+                        系统内置5个删种规则，按优先级P100→P30执行。删种前会自动强制汇报一次，避免丢失上传。
+                    </div>
+                    <div class="remove-rule-tabs" id="remove-rule-tabs">
+                        <button class="remove-rule-tab active" onclick="switchRemoveCategory('慢车')">慢车</button>
+                        <button class="remove-rule-tab" onclick="switchRemoveCategory('黑车')">黑车</button>
+                        <button class="remove-rule-tab" onclick="switchRemoveCategory('低收益')">低收益</button>
+                        <button class="remove-rule-tab" onclick="switchRemoveCategory('长时间')">长时间</button>
+                        <button class="remove-rule-tab" onclick="switchRemoveCategory('空间不足')">空间不足</button>
+                        <button class="remove-rule-tab" onclick="switchRemoveCategory('自定义')">自定义</button>
+                        <button class="remove-rule-tab" onclick="switchRemoveCategory('全部')">全部</button>
+                    </div>
+                    <div id="remove-rules-list">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
                         </div>
-                        <div id="remove-rules-list">
-                            <div class="loading">
-                                <div class="loading-spinner"></div>
-                            </div>
-                        </div>
+                    </div>
                     </div>
                 </section>
                 
@@ -2172,6 +2245,15 @@
                 <button class="modal-close" onclick="closeModal('add-site-modal')">✕</button>
             </div>
             <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">站点预设</label>
+                    <select class="form-input" id="site-preset-select" onchange="applySitePreset(this.value)">
+                        <option value="">选择预设（可选）</option>
+                    </select>
+                    <div class="preset-hint" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                        ⓘ 选择预设会自动填充站点URL/名称/Tracker关键词
+                    </div>
+                </div>
                 <div class="form-group">
                     <label class="form-label">站点名称 *</label>
                     <input type="text" class="form-input" id="site-name" placeholder="如: U2">
@@ -3310,18 +3392,25 @@
             // 检查是否已存在
             let modal = document.getElementById(id);
             if (modal) {
-                modal.querySelector('.modal-content > div:last-child').innerHTML = content;
+                const titleEl = modal.querySelector('.modal-title');
+                if (titleEl) {
+                    titleEl.textContent = title;
+                }
+                const bodyEl = modal.querySelector('.modal-body');
+                if (bodyEl) {
+                    bodyEl.innerHTML = content;
+                }
             } else {
                 modal = document.createElement('div');
                 modal.id = id;
-                modal.className = 'modal active';
+                modal.className = 'modal-overlay active';
                 modal.innerHTML = `
-                    <div class="modal-content" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal">
                         <div class="modal-header">
-                            <h3>${title}</h3>
+                            <h3 class="modal-title">${title}</h3>
                             <button class="modal-close" onclick="closeModal('${id}')">&times;</button>
                         </div>
-                        <div>${content}</div>
+                        <div class="modal-body">${content}</div>
                     </div>
                 `;
                 document.body.appendChild(modal);
@@ -3753,6 +3842,41 @@
                 sites.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
         }
 
+        async function loadSitePresets() {
+            const select = document.getElementById('site-preset-select');
+            if (!select) {
+                return;
+            }
+            try {
+                const presets = await api('/pt/site_presets');
+                const options = presets.map(preset => {
+                    const label = `${preset.domain} (${preset.site_type || 'unknown'})`;
+                    return `<option value="${preset.domain}">${label}</option>`;
+                }).join('');
+                select.innerHTML = `<option value="">选择预设（可选）</option>${options}`;
+            } catch (error) {
+                console.warn('加载站点预设失败:', error);
+            }
+        }
+
+        function applySitePreset(domain) {
+            if (!domain) {
+                return;
+            }
+            const urlInput = document.getElementById('site-url');
+            const nameInput = document.getElementById('site-name');
+            const trackerInput = document.getElementById('site-tracker');
+            if (urlInput) {
+                urlInput.value = `https://${domain}`;
+            }
+            if (nameInput && !nameInput.value) {
+                nameInput.value = domain;
+            }
+            if (trackerInput && !trackerInput.value) {
+                trackerInput.value = domain;
+            }
+        }
+
         function showAddSiteModal() {
             document.getElementById('site-name').value = '';
             document.getElementById('site-url').value = '';
@@ -3763,6 +3887,10 @@
             document.getElementById('site-reannounce-source').value = 'auto';
             document.getElementById('site-enable-dl-limit').checked = true;
             document.getElementById('site-enable-reannounce-opt').checked = true;
+            const presetSelect = document.getElementById('site-preset-select');
+            if (presetSelect) {
+                presetSelect.value = '';
+            }
             showModal('add-site-modal');
         }
 
@@ -4228,42 +4356,227 @@
         // ═══════════════════════════════════════════════════════════════════
         // Remove Rules
         // ═══════════════════════════════════════════════════════════════════
+        let _removeRules = [];
+        let _removeCategory = '慢车';
+
+        function switchRemoveCategory(category) {
+            _removeCategory = category;
+            const tabs = document.querySelectorAll('#remove-rule-tabs .remove-rule-tab');
+            tabs.forEach(tab => {
+                tab.classList.toggle('active', tab.textContent.trim() === category);
+            });
+            renderRemoveRules();
+        }
+
+        function renderRemoveRules() {
+            const container = document.getElementById('remove-rules-list');
+            if (!_removeRules || _removeRules.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🗑️</div>
+                        <div class="empty-state-title">暂无删种规则</div>
+                        <div class="empty-state-text">添加规则自动清理种子</div>
+                    </div>
+                `;
+                return;
+            }
+            const category = _removeCategory;
+            const ruleCategory = (rule) => {
+                if (rule.builtin === 1) {
+                    const name = rule.name || '';
+                    if (name.includes('慢车')) return '慢车';
+                    if (name.includes('黑车')) return '黑车';
+                    if (name.includes('低收益')) return '低收益';
+                    if (name.includes('长时间')) return '长时间';
+                    if (name.includes('空间不足')) return '空间不足';
+                    return '内置';
+                }
+                return '自定义';
+            };
+            const filtered = category === '全部'
+                ? _removeRules
+                : _removeRules.filter(rule => ruleCategory(rule) === category);
+            if (!filtered.length) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🗑️</div>
+                        <div class="empty-state-title">当前分类暂无规则</div>
+                        <div class="empty-state-text">可切换分类或添加规则</div>
+                    </div>
+                `;
+                return;
+            }
+            container.innerHTML = filtered.map(rule => {
+                const isBuiltin = rule.builtin === 1;
+                return `
+                <div class="rule-card ${isBuiltin ? 'rule-builtin' : ''}">
+                    <div class="rule-info">
+                        <div class="rule-name">
+                            ${rule.name}
+                            <span class="rule-priority">P${rule.priority}</span>
+                            ${isBuiltin ? '<span class="badge badge-info">内置</span>' : ''}
+                        </div>
+                        <div class="rule-description">${rule.description || '无描述'}</div>
+                    </div>
+                    <div class="rule-actions">
+                        <label class="switch">
+                            <input type="checkbox" ${rule.enabled ? 'checked' : ''} onchange="toggleRemoveRule(${rule.id}, this.checked)">
+                            <span class="switch-slider"></span>
+                        </label>
+                        ${!isBuiltin ? `<button class="btn btn-danger btn-sm btn-icon" onclick="deleteRemoveRule(${rule.id})">🗑️</button>` : ''}
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function showRemoveCategoryModal() {
+            const category = _removeCategory;
+            if (category !== '黑车') {
+                showToast('当前分类没有档位设置', 'info');
+                return;
+            }
+            const rule = _removeRules.find(r => r.builtin === 1 && (r.name || '').includes('黑车'));
+            if (!rule) {
+                showToast('未找到黑车规则', 'warning');
+                return;
+            }
+            let condition = {};
+            try {
+                condition = typeof rule.condition === 'string' ? JSON.parse(rule.condition) : (rule.condition || {});
+            } catch (e) {
+                condition = {};
+            }
+            const duration = condition.blackcar_duration || 80;
+            const bands = Array.isArray(condition.blackcar_speeds) ? condition.blackcar_speeds : [];
+            const rows = bands.map((band, idx) => `
+                <tr>
+                    <td>${band.down}</td>
+                    <td>${band.up}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="removeBlackcarBand(${idx})">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+            const content = `
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div>
+                        <label class="form-label">持续时间（秒）</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="number" class="form-input" id="blackcar-duration" value="${duration}" min="10">
+                            <button class="btn btn-secondary" onclick="saveBlackcarDuration(${rule.id})">保存</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label">档位列表（down/up KiB/s）</label>
+                        <div style="overflow-x: auto;">
+                            <table class="table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>down</th>
+                                        <th>up</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="blackcar-band-list">
+                                    ${rows || '<tr><td colspan="3" style="text-align:center;">暂无档位</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label">新增档位</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                            <input type="number" class="form-input" id="blackcar-down" placeholder="down KiB/s" min="0">
+                            <input type="number" class="form-input" id="blackcar-up" placeholder="up KiB/s" min="0">
+                            <button class="btn btn-primary" onclick="addBlackcarBand(${rule.id})">添加</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            showCustomModal('remove-category-modal', `🧊 黑车档位设置`, content);
+        }
+
+        function getBlackcarCondition() {
+            const rule = _removeRules.find(r => r.builtin === 1 && (r.name || '').includes('黑车'));
+            if (!rule) {
+                return { ruleId: null, condition: null };
+            }
+            let condition = {};
+            try {
+                condition = typeof rule.condition === 'string' ? JSON.parse(rule.condition) : (rule.condition || {});
+            } catch (e) {
+                condition = {};
+            }
+            if (!Array.isArray(condition.blackcar_speeds)) {
+                condition.blackcar_speeds = [];
+            }
+            if (!condition.blackcar_duration) {
+                condition.blackcar_duration = 80;
+            }
+            return { ruleId: rule.id, condition };
+        }
+
+        async function saveBlackcarDuration(ruleId) {
+            const duration = parseInt(document.getElementById('blackcar-duration').value, 10);
+            if (!duration || duration < 10) {
+                showToast('持续时间至少10秒', 'warning');
+                return;
+            }
+            const data = getBlackcarCondition();
+            if (!data.ruleId) {
+                showToast('未找到黑车规则', 'warning');
+                return;
+            }
+            data.condition.blackcar_duration = duration;
+            await updateRemoveRuleCondition(data.ruleId, data.condition);
+        }
+
+        async function addBlackcarBand(ruleId) {
+            const down = parseInt(document.getElementById('blackcar-down').value, 10);
+            const up = parseInt(document.getElementById('blackcar-up').value, 10);
+            if (!down || !up) {
+                showToast('请填写down/up数值', 'warning');
+                return;
+            }
+            const data = getBlackcarCondition();
+            if (!data.ruleId) {
+                showToast('未找到黑车规则', 'warning');
+                return;
+            }
+            data.condition.blackcar_speeds.push({ down, up });
+            await updateRemoveRuleCondition(data.ruleId, data.condition);
+            document.getElementById('blackcar-down').value = '';
+            document.getElementById('blackcar-up').value = '';
+        }
+
+        async function removeBlackcarBand(index) {
+            const data = getBlackcarCondition();
+            if (!data.ruleId) {
+                showToast('未找到黑车规则', 'warning');
+                return;
+            }
+            data.condition.blackcar_speeds.splice(index, 1);
+            await updateRemoveRuleCondition(data.ruleId, data.condition);
+        }
+
+        async function updateRemoveRuleCondition(ruleId, condition) {
+            try {
+                await api(`/remove/rules/${ruleId}`, {
+                    method: 'PUT',
+                    body: { condition: JSON.stringify(condition) }
+                });
+                await loadRemoveRules();
+                showToast('已保存', 'success');
+                showRemoveCategoryModal();
+            } catch (error) {
+                showToast('保存失败: ' + error.message, 'error');
+            }
+        }
+
         async function loadRemoveRules() {
             try {
-                const rules = await api('/remove/rules');
-                const container = document.getElementById('remove-rules-list');
-                
-                if (rules.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">🗑️</div>
-                            <div class="empty-state-title">暂无删种规则</div>
-                            <div class="empty-state-text">添加规则自动清理种子</div>
-                        </div>
-                    `;
-                } else {
-                    container.innerHTML = rules.map(rule => {
-                        const isBuiltin = rule.builtin === 1;
-                        return `
-                        <div class="rule-card ${isBuiltin ? 'rule-builtin' : ''}">
-                            <div class="rule-info">
-                                <div class="rule-name">
-                                    ${rule.name}
-                                    <span class="rule-priority">P${rule.priority}</span>
-                                    ${isBuiltin ? '<span class="badge badge-info">内置</span>' : ''}
-                                </div>
-                                <div class="rule-description">${rule.description || '无描述'}</div>
-                            </div>
-                            <div class="rule-actions">
-                                <label class="switch">
-                                    <input type="checkbox" ${rule.enabled ? 'checked' : ''} onchange="toggleRemoveRule(${rule.id}, this.checked)">
-                                    <span class="switch-slider"></span>
-                                </label>
-                                ${!isBuiltin ? `<button class="btn btn-danger btn-sm btn-icon" onclick="deleteRemoveRule(${rule.id})">🗑️</button>` : ''}
-                            </div>
-                        </div>
-                    `}).join('');
-                }
+                _removeRules = await api('/remove/rules');
+                renderRemoveRules();
             } catch (error) {
                 showToast('加载规则失败: ' + error.message, 'error');
             }
@@ -4335,7 +4648,7 @@
         }
         
         async function resetBuiltinRules() {
-            if (!confirm('确定要重置所有内置删种规则吗？这将恢复默认的8个内置规则。')) return;
+            if (!confirm('确定要重置所有内置删种规则吗？这将恢复默认的5个内置规则。')) return;
             
             try {
                 await api('/remove/rules/reset', { method: 'POST' });
@@ -5217,6 +5530,7 @@
                 loadDashboard();
             }
             loadInstances();
+            loadSitePresets();
             
             // Auto refresh dashboard every 10 seconds
             setInterval(() => {
